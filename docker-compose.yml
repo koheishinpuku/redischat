@@ -1,0 +1,71 @@
+version: "3.5"
+services:
+  # API Container
+  benkyoukai-go:
+    container_name: benkyoukai-go
+    build: .
+    restart: "no"
+    volumes:
+      - ".:/go/src/benkyoukai-go"
+    ports:
+      - "5000:5000"
+    networks:
+      - benkyoukai
+    environment:
+      - GO_ENV=development
+      - DB_HOST=172.18.0.1
+      - DB_USER=root
+      - DB_PWD=root
+      - DB_DATABASE=benkyoukai
+      - DB_PORT=3307
+      - PORT=5000
+
+    # For production comment this line
+    command: sh -c "npm i -g knex && air -c .air.conf"
+
+  benkyoukai-redis:
+    container_name: benkyoukai-redis
+    build: ./redis
+    restart: "no"
+    volumes:
+      - "./redis/data:/data"
+    ports:
+      - "6001:6379"
+    networks:
+      - benkyoukai
+
+  # Database container
+  benkyoukai-db:
+    container_name: benkyoukai-db
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ".mysql:/var/lib/mysql"
+    ports:
+      - 3307:3306
+    networks:
+      - benkyoukai
+
+  # PHP my admin for managing the database
+  benkyoukai-phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: benkyoukai-phpmyadmin
+    environment:
+      - PMA_HOST=benkyoukai-db
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+      - PMA_ARBITRARY=1
+    restart: "no"
+    ports:
+      - 8081:80
+    volumes:
+      - /sessions
+    networks:
+      - benkyoukai
+
+networks:
+  benkyoukai:
+    driver: bridge
